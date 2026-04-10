@@ -14,6 +14,8 @@
     <div class="placar" id="display">Aguardando dados...</div>
 
     <script>
+        // No início do script
+        document.getElementById("display").innerHTML = "Sincronizando placar...";
         // Alterações: 
         // 1. Usamos a porta 8884 (porta segura do HiveMQ)
         // 2. Ativamos a flag useSSL: true
@@ -34,7 +36,13 @@
         
         function onConnect() {
             console.log("Conectado com sucesso via WSS!");
-            client.subscribe("projeto_arcade_mika_2024_xyz/placar"); // Use o mesmo tópico do ESP32
+           
+        }
+        function onConnect() {
+            console.log("Conectado!");
+            // Ao assinar o tópico, se houver uma mensagem "Retida", 
+            // o evento onMessageArrived será disparado instantaneamente
+            client.subscribe("projeto_arcade_mika_2024_xyz/placar"); // Use o mesmo tópico do ESP32 
         }
         
         client.connect(options);    
