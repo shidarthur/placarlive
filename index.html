@@ -49,6 +49,9 @@
         };
 
         client.onMessageArrived = (message) => {
+            console.log("Chegou da mesa: " + message.destinationName);
+            console.log("Conteúdo: " + message.payloadString);
+            const mesaId = message.destinationName.split('/')[1];
             const mesaId = message.destinationName.split('/')[1]; // Pega 'mesa1', 'mesa2' ou 'mesa3'
             const payload = message.payloadString; // Espera formato "P1 x P2" vindo do ESP32
             
