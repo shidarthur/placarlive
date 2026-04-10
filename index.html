@@ -2,28 +2,29 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Placar Tenis de Mesa Pro</title>
+    <title>Arena Tênis de Mesa - 3 Mesas</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-        .mesa { background: #1e1e1e; border: 2px solid #333; border-radius: 15px; width: 350px; padding: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .mesa { background: #1e1e1e; border: 2px solid #333; border-radius: 15px; width: 350px; padding: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); position: relative; }
         .placar-box { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; background: #000; padding: 20px; border-radius: 10px; }
         .pontos { font-size: 70px; font-weight: bold; color: #00ff00; line-height: 1; }
-        .label { font-size: 12px; color: #aaa; margin-top: 5px; }
-        .sets { font-size: 24px; color: #ff9800; margin-bottom: 10px; }
+        .label { font-size: 12px; color: #aaa; margin-top: 5px; height: 15px; }
+        .sets { font-size: 24px; color: #ff9800; margin-bottom: 10px; font-weight: bold; }
         .saque { height: 12px; width: 12px; background: #ffff00; border-radius: 50%; margin: 5px auto; visibility: hidden; }
         .saque.ativo { visibility: visible; box-shadow: 0 0 10px #ffff00; }
         .info-footer { font-size: 13px; color: #666; border-top: 1px solid #333; padding-top: 10px; }
-        button { background: #444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        button:hover { background: #666; }
+        button { background: #444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 12px; }
+        button:hover { background: #cc0000; }
+        .status-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #00ff00; }
     </style>
 </head>
 <body>
 
     <div class="mesa" id="mesa1">
-        <h2 style="color:#00d4ff">MESA 1</h2>
+        <div class="status-badge">ONLINE</div>
+        <h2 style="color:#00d4ff; margin:0;">MESA 1</h2>
         <div class="sets" id="m1-sets">SETS: 0 - 0</div>
-        
         <div class="placar-box">
             <div style="flex:1">
                 <div id="m1-s1" class="saque"></div>
@@ -37,38 +38,86 @@
                 <div class="label" id="m1-l2">JOGADOR 2</div>
             </div>
         </div>
-
         <div class="info-footer">
             <span id="m1-msg">Set 1 - Lado Normal</span><br>
-            <button onclick="resetMesa('mesa1')">Reiniciar Partida</button>
+            <button onclick="resetMesa('mesa1')">Zerar Mesa 1</button>
+        </div>
+    </div>
+
+    <div class="mesa" id="mesa2">
+        <div class="status-badge">ONLINE</div>
+        <h2 style="color:#00d4ff; margin:0;">MESA 2</h2>
+        <div class="sets" id="m2-sets">SETS: 0 - 0</div>
+        <div class="placar-box">
+            <div style="flex:1">
+                <div id="m2-s1" class="saque"></div>
+                <div class="pontos" id="m2-p1">0</div>
+                <div class="label" id="m2-l1">JOGADOR 1</div>
+            </div>
+            <div style="font-size:30px; color:#444">VS</div>
+            <div style="flex:1">
+                <div id="m2-s2" class="saque"></div>
+                <div class="pontos" id="m2-p2">0</div>
+                <div class="label" id="m2-l2">JOGADOR 2</div>
+            </div>
+        </div>
+        <div class="info-footer">
+            <span id="m2-msg">Set 1 - Lado Normal</span><br>
+            <button onclick="resetMesa('mesa2')">Zerar Mesa 2</button>
+        </div>
+    </div>
+
+    <div class="mesa" id="mesa3">
+        <div class="status-badge">ONLINE</div>
+        <h2 style="color:#00d4ff; margin:0;">MESA 3</h2>
+        <div class="sets" id="m3-sets">SETS: 0 - 0</div>
+        <div class="placar-box">
+            <div style="flex:1">
+                <div id="m3-s1" class="saque"></div>
+                <div class="pontos" id="m3-p1">0</div>
+                <div class="label" id="m3-l1">JOGADOR 1</div>
+            </div>
+            <div style="font-size:30px; color:#444">VS</div>
+            <div style="flex:1">
+                <div id="m3-s2" class="saque"></div>
+                <div class="pontos" id="m3-p2">0</div>
+                <div class="label" id="m3-l2">JOGADOR 2</div>
+            </div>
+        </div>
+        <div class="info-footer">
+            <span id="m3-msg">Set 1 - Lado Normal</span><br>
+            <button onclick="resetMesa('mesa3')">Zerar Mesa 3</button>
         </div>
     </div>
 
     <script>
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "client_" + Math.random().toString(16));
+        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_arena_" + Math.random().toString(16));
 
-        // Estado inicial do jogo
-        const bancoDados = {
-            mesa1: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false }
+        // Banco de dados para as 3 mesas
+        const db = {
+            mesa1: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false },
+            mesa2: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false },
+            mesa3: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false }
         };
 
-        function resetMesa(id) {
-            bancoDados[id] = { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false };
-            renderizar(id);
+        function resetMesa(mesaId) {
+            db[mesaId] = { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false };
+            renderizar(mesaId);
         }
 
         function renderizar(id) {
-            const m = bancoDados[id];
-            const prefix = id === 'mesa1' ? 'm1' : 'm2'; // Exemplo simplificado
+            const m = db[id];
+            // Mapeia mesa1 -> m1, mesa2 -> m2, mesa3 -> m3 para os IDs do HTML
+            const pref = id === 'mesa1' ? 'm1' : (id === 'mesa2' ? 'm2' : 'm3');
 
-            document.getElementById(`${prefix}-p1`).innerText = m.p1;
-            document.getElementById(`${prefix}-p2`).innerText = m.p2;
-            document.getElementById(`${prefix}-sets`).innerText = `SETS: ${m.s1} - ${m.s2}`;
-            document.getElementById(`${prefix}-l1`).innerText = m.invertido ? "JOGADOR 2" : "JOGADOR 1";
-            document.getElementById(`${prefix}-l2`).innerText = m.invertido ? "JOGADOR 1" : "JOGADOR 2";
-            document.getElementById(`${prefix}-msg`).innerText = `Set ${m.setAtual} - ${m.invertido ? 'Lados Invertidos' : 'Lados Normais'}`;
+            document.getElementById(`${pref}-p1`).innerText = m.p1;
+            document.getElementById(`${pref}-p2`).innerText = m.p2;
+            document.getElementById(`${pref}-sets`).innerText = `SETS: ${m.s1} - ${m.s2}`;
+            document.getElementById(`${pref}-l1`).innerText = m.invertido ? "JOGADOR 2" : "JOGADOR 1";
+            document.getElementById(`${pref}-l2`).innerText = m.invertido ? "JOGADOR 1" : "JOGADOR 2";
+            document.getElementById(`${pref}-msg`).innerText = `Set ${m.setAtual} - ${m.invertido ? 'Lados Invertidos' : 'Lados Normais'}`;
 
-            // Lógica de Saque (2 em 2, ou 1 em 1 se 10x10)
+            // Lógica de Saque
             const total = m.p1 + m.p2;
             let saqueJ1;
             if (m.p1 >= 10 && m.p2 >= 10) {
@@ -77,14 +126,14 @@
                 saqueJ1 = (Math.floor(total / 2) % 2 === 0);
             }
 
-            document.getElementById(`${prefix}-s1`).className = `saque ${saqueJ1 ? 'ativo' : ''}`;
-            document.getElementById(`${prefix}-s2`).className = `saque ${!saqueJ1 ? 'ativo' : ''}`;
+            // Se estiver invertido, o saque visual também inverte para seguir o jogador
+            document.getElementById(`${pref}-s1`).className = `saque ${saqueJ1 ? 'ativo' : ''}`;
+            document.getElementById(`${pref}-s2`).className = `saque ${!saqueJ1 ? 'ativo' : ''}`;
         }
 
         function processarAcao(id, acao) {
-            const m = bancoDados[id];
+            const m = db[id];
             
-            // 1. Aplicar Pontos ou Subtração
             if (acao === 'A') {
                 m.invertido ? m.p2++ : m.p1++;
             } else if (acao === 'B') {
@@ -95,26 +144,31 @@
                 m.invertido ? (m.p1 > 0 && m.p1--) : (m.p2 > 0 && m.p2--);
             }
 
-            // 2. Regra de Fim de Set (11 pontos e diferença de 2)
+            // Regra oficial: 11 pontos com diferença de 2
             if ((m.p1 >= 11 || m.p2 >= 11) && Math.abs(m.p1 - m.p2) >= 2) {
                 if (m.p1 > m.p2) m.s1++; else m.s2++;
                 m.p1 = 0; m.p2 = 0;
                 m.setAtual++;
-                m.invertido = !m.invertido; // Inverte para o próximo set
+                m.invertido = !m.invertido; 
             }
 
             renderizar(id);
         }
 
         client.onMessageArrived = (msg) => {
-            const mesaId = msg.destinationName.split('/')[1];
-            const acao = msg.payloadString;
-            if (bancoDados[mesaId]) processarAcao(mesaId, acao);
+            const topicoPartes = msg.destinationName.split('/');
+            const mesaId = topicoPartes[1]; // Ex: mesa1, mesa2, mesa3
+            const acao = msg.payloadString; // Ex: A, B, RA, RB
+
+            if (db[mesaId]) {
+                processarAcao(mesaId, acao);
+            }
         };
 
         client.connect({ useSSL: true, onSuccess: () => {
+            // Assina o tópico pai para ouvir todas as mesas (tenis_mesa/mesa1/comando, etc)
             client.subscribe("tenis_mesa/+/comando");
-            console.log("Conectado!");
+            console.log("Conectado ao Arena MQTT!");
         }});
     </script>
 </body>
