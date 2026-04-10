@@ -2,103 +2,119 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Arena Tênis de Mesa</title>
+    <title>Placar Tenis de Mesa Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: 'Arial', sans-serif; background: #121212; color: white; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-        .mesa { background: #1e1e1e; border: 3px solid #333; border-radius: 20px; width: 350px; padding: 25px; text-align: center; }
-        .placar-container { display: flex; justify-content: space-around; align-items: center; margin: 20px 0; }
-        .jogador { flex: 1; }
-        .pontos { font-size: 80px; font-weight: bold; color: #00ff00; }
-        .sets { font-size: 24px; color: #ff9800; }
-        .saque-indicador { height: 10px; width: 10px; background: #ffff00; border-radius: 50%; display: inline-block; visibility: hidden; }
-        .ativo { visibility: visible; }
-        .info { color: #888; font-size: 14px; margin-top: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
+        .mesa { background: #1e1e1e; border: 2px solid #333; border-radius: 15px; width: 350px; padding: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .placar-box { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; background: #000; padding: 20px; border-radius: 10px; }
+        .pontos { font-size: 70px; font-weight: bold; color: #00ff00; line-height: 1; }
+        .label { font-size: 12px; color: #aaa; margin-top: 5px; }
+        .sets { font-size: 24px; color: #ff9800; margin-bottom: 10px; }
+        .saque { height: 12px; width: 12px; background: #ffff00; border-radius: 50%; margin: 5px auto; visibility: hidden; }
+        .saque.ativo { visibility: visible; box-shadow: 0 0 10px #ffff00; }
+        .info-footer { font-size: 13px; color: #666; border-top: 1px solid #333; padding-top: 10px; }
+        button { background: #444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #666; }
     </style>
 </head>
 <body>
 
     <div class="mesa" id="mesa1">
-        <h2>MESA 1</h2>
-        <div class="sets" id="m1-sets">0 - 0</div>
-        <div class="placar-container">
-            <div class="jogador">
-                <div id="m1-s-j1" class="saque-indicador"></div>
+        <h2 style="color:#00d4ff">MESA 1</h2>
+        <div class="sets" id="m1-sets">SETS: 0 - 0</div>
+        
+        <div class="placar-box">
+            <div style="flex:1">
+                <div id="m1-s1" class="saque"></div>
                 <div class="pontos" id="m1-p1">0</div>
-                <div>JOGADOR 1</div>
+                <div class="label" id="m1-l1">JOGADOR 1</div>
             </div>
-            <div style="font-size: 30px;">x</div>
-            <div class="jogador">
-                <div id="m1-s-j2" class="saque-indicador"></div>
+            <div style="font-size:30px; color:#444">VS</div>
+            <div style="flex:1">
+                <div id="m1-s2" class="saque"></div>
                 <div class="pontos" id="m1-p2">0</div>
-                <div>JOGADOR 2</div>
+                <div class="label" id="m1-l2">JOGADOR 2</div>
             </div>
         </div>
-        <div class="info" id="m1-msg">Set 1 - Lado Normal</div>
-        <button onclick="resetarMesa('mesa1')" style="margin-top:15px; cursor:pointer;">Resetar Partida</button>
+
+        <div class="info-footer">
+            <span id="m1-msg">Set 1 - Lado Normal</span><br>
+            <button onclick="resetMesa('mesa1')">Reiniciar Partida</button>
+        </div>
     </div>
 
     <script>
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_logic_" + Math.random().toString(16));
+        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "client_" + Math.random().toString(16));
 
-        // Objeto de estado para cada mesa
-        const jogo = {
-            mesa1: { p1: 0, p2: 0, sets1: 0, sets2: 0, setAtual: 1, invertido: false }
-            // mesa2: ... mesa3: ...
+        // Estado inicial do jogo
+        const bancoDados = {
+            mesa1: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false }
         };
 
-        function resetarMesa(id) {
-            jogo[id] = { p1: 0, p2: 0, sets1: 0, sets2: 0, setAtual: 1, invertido: false };
-            atualizarTela(id);
+        function resetMesa(id) {
+            bancoDados[id] = { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false };
+            renderizar(id);
         }
 
-        function atualizarTela(id) {
-            const m = jogo[id];
-            const prefix = id === 'mesa1' ? 'm1' : 'm2'; // Simplificado para exemplo
-            
+        function renderizar(id) {
+            const m = bancoDados[id];
+            const prefix = id === 'mesa1' ? 'm1' : 'm2'; // Exemplo simplificado
+
             document.getElementById(`${prefix}-p1`).innerText = m.p1;
             document.getElementById(`${prefix}-p2`).innerText = m.p2;
-            document.getElementById(`${prefix}-sets`).innerText = `${m.sets1} - ${m.sets2}`;
+            document.getElementById(`${prefix}-sets`).innerText = `SETS: ${m.s1} - ${m.s2}`;
+            document.getElementById(`${prefix}-l1`).innerText = m.invertido ? "JOGADOR 2" : "JOGADOR 1";
+            document.getElementById(`${prefix}-l2`).innerText = m.invertido ? "JOGADOR 1" : "JOGADOR 2";
             document.getElementById(`${prefix}-msg`).innerText = `Set ${m.setAtual} - ${m.invertido ? 'Lados Invertidos' : 'Lados Normais'}`;
 
-            // Lógica de Saque
+            // Lógica de Saque (2 em 2, ou 1 em 1 se 10x10)
             const total = m.p1 + m.p2;
-            const saqueJ1 = (m.p1 >= 10 && m.p2 >= 10) ? (total % 2 === 0) : (Math.floor(total / 2) % 2 === 0);
-            
-            document.getElementById(`${prefix}-s-j1`).className = `saque-indicador ${saqueJ1 ? 'ativo' : ''}`;
-            document.getElementById(`${prefix}-s-j2`).className = `saque-indicador ${!saqueJ1 ? 'ativo' : ''}`;
+            let saqueJ1;
+            if (m.p1 >= 10 && m.p2 >= 10) {
+                saqueJ1 = (total % 2 === 0);
+            } else {
+                saqueJ1 = (Math.floor(total / 2) % 2 === 0);
+            }
+
+            document.getElementById(`${prefix}-s1`).className = `saque ${saqueJ1 ? 'ativo' : ''}`;
+            document.getElementById(`${prefix}-s2`).className = `saque ${!saqueJ1 ? 'ativo' : ''}`;
         }
 
-        function processarPonto(id, botao) {
-            const m = jogo[id];
+        function processarAcao(id, acao) {
+            const m = bancoDados[id];
             
-            // Inversão: Se estiver invertido, botão A dá ponto ao Jogador 2
-            if (!m.invertido) {
-                if (botao === 'A') m.p1++; else m.p2++;
-            } else {
-                if (botao === 'A') m.p2++; else m.p1++;
+            // 1. Aplicar Pontos ou Subtração
+            if (acao === 'A') {
+                m.invertido ? m.p2++ : m.p1++;
+            } else if (acao === 'B') {
+                m.invertido ? m.p1++ : m.p2++;
+            } else if (acao === 'RA') {
+                m.invertido ? (m.p2 > 0 && m.p2--) : (m.p1 > 0 && m.p1--);
+            } else if (acao === 'RB') {
+                m.invertido ? (m.p1 > 0 && m.p1--) : (m.p2 > 0 && m.p2--);
             }
 
-            // Fim do Set?
+            // 2. Regra de Fim de Set (11 pontos e diferença de 2)
             if ((m.p1 >= 11 || m.p2 >= 11) && Math.abs(m.p1 - m.p2) >= 2) {
-                if (m.p1 > m.p2) m.sets1++; else m.sets2++;
+                if (m.p1 > m.p2) m.s1++; else m.s2++;
                 m.p1 = 0; m.p2 = 0;
                 m.setAtual++;
-                m.invertido = !m.invertido; // Inverte o lado para o próximo set
-                alert("Fim do Set!");
+                m.invertido = !m.invertido; // Inverte para o próximo set
             }
 
-            atualizarTela(id);
+            renderizar(id);
         }
 
         client.onMessageArrived = (msg) => {
             const mesaId = msg.destinationName.split('/')[1];
-            const botao = msg.payloadString; // "A" ou "B"
-            processarPonto(mesaId, botao);
+            const acao = msg.payloadString;
+            if (bancoDados[mesaId]) processarAcao(mesaId, acao);
         };
 
         client.connect({ useSSL: true, onSuccess: () => {
             client.subscribe("tenis_mesa/+/comando");
+            console.log("Conectado!");
         }});
     </script>
 </body>
