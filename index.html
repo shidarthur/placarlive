@@ -2,106 +2,109 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Live Pong - 3 Mesas</title>
+    <title>Placar Tênis de Mesa - Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1a1a1a; color: white; display: flex; gap: 20px; justify-content: center; padding: 20px; }
-        .mesa-card { border: 2px solid #444; border-radius: 10px; padding: 20px; width: 300px; background: #222; text-align: center; }
-        .placar-grande { font-size: 60px; font-weight: bold; color: #00ff00; margin: 10px 0; }
-        .sets { font-size: 20px; color: #aaa; }
-        .sacador { color: #ffff00; font-size: 14px; text-transform: uppercase; margin-top: 10px; }
-        .mesa-titulo { border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; color: #00d4ff; }
-        .vitoria { color: #ff4500; font-weight: bold; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; padding: 20px; }
+        .mesa-card { border: 2px solid #333; border-radius: 12px; padding: 20px; width: 280px; background: #1e1e1e; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .mesa-titulo { color: #00d4ff; font-size: 1.2em; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        .placar-grande { font-size: 50px; color: #00ff00; margin: 10px 0; font-family: 'Courier New', Courier, monospace; }
+        .sets { font-size: 18px; color: #ff9800; margin-bottom: 5px; }
+        .sacador { background: #333; padding: 5px; border-radius: 5px; color: #ffff00; font-size: 0.9em; min-height: 20px; }
     </style>
 </head>
 <body>
 
-    <div id="mesa1" class="mesa-card">
+    <div class="mesa-card">
         <div class="mesa-titulo">MESA 1</div>
         <div class="sets" id="m1-sets">Sets: 0 - 0</div>
         <div class="placar-grande" id="m1-pontos">0 - 0</div>
-        <div class="sacador" id="m1-saque">Inicie o jogo</div>
+        <div class="sacador" id="m1-saque">Aguardando...</div>
     </div>
 
-    <div id="mesa2" class="mesa-card">
+    <div class="mesa-card">
         <div class="mesa-titulo">MESA 2</div>
         <div class="sets" id="m2-sets">Sets: 0 - 0</div>
         <div class="placar-grande" id="m2-pontos">0 - 0</div>
-        <div class="sacador" id="m2-saque">Inicie o jogo</div>
+        <div class="sacador" id="m2-saque">Aguardando...</div>
     </div>
 
-    <div id="mesa3" class="mesa-card">
+    <div class="mesa-card">
         <div class="mesa-titulo">MESA 3</div>
         <div class="sets" id="m3-sets">Sets: 0 - 0</div>
         <div class="placar-grande" id="m3-pontos">0 - 0</div>
-        <div class="sacador" id="m3-saque">Inicie o jogo</div>
+        <div class="sacador" id="m3-saque">Aguardando...</div>
     </div>
 
     <script>
-        // Configuração MQTT
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_pong_" + Math.random());
+        // Use o servidor broker.hivemq.com na porta 8884 para WSS (GitHub Pages exige isso)
+        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_client_" + Math.random().toString(16));
 
-        // Objeto para controlar o estado de cada mesa
         const estados = {
-            mesa1: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1 },
-            mesa2: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1 },
-            mesa3: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1 }
+            mesa1: { s1: 0, s2: 0, setAtual: 1 },
+            mesa2: { s1: 0, s2: 0, setAtual: 1 },
+            mesa3: { s1: 0, s2: 0, setAtual: 1 }
+        };
+
+        client.onConnectionLost = (responseObject) => {
+            console.log("Conexão perdida: " + responseObject.errorMessage);
+            setTimeout(() => location.reload(), 5000); // Tenta recarregar a página se cair
         };
 
         client.onMessageArrived = (message) => {
-            console.log("Chegou da mesa: " + message.destinationName);
+            console.log("Mensagem recebida no tópico: " + message.destinationName);
             console.log("Conteúdo: " + message.payloadString);
-            const mesaId = message.destinationName.split('/')[1]; // Pega 'mesa1', 'mesa2' ou 'mesa3'
-            const payload = message.payloadString; // Espera formato "P1 x P2" vindo do ESP32
+
+            // Extrai o nome da mesa (ex: mesa1) do tópico tenis_mesa/mesa1/pontos
+            const partes = message.destinationName.split('/');
+            const mesaId = partes[1]; 
+            const prefixo = mesaId === 'mesa1' ? 'm1' : mesaId === 'mesa2' ? 'm2' : 'm3';
+
+            // Limpa o payload (espera "X x Y")
+            const pts = message.payloadString.match(/\d+/g);
+            if (!pts || pts.length < 2) return;
+
+            let pA = parseInt(pts[0]);
+            let pB = parseInt(pts[1]);
+
+            const mesa = estados[mesaId];
             
-            processarPontos(mesaId, payload);
-        };
-
-        function processarPontos(id, payload) {
-            const pts = payload.replace(/[()a-zA-Z]/g, '').split('x').map(Number);
-            let pA = pts[0];
-            let pB = pts[1];
-
-            const mesa = estados[id];
-            
-            // Lógica de Inversão de Lados baseada no Set
-            // Se set for par (2 ou 4), invertemos a atribuição dos botões
-            let pontoJ1, pontoJ2;
-            if (mesa.setAtual % 2 !== 0) {
-                pontoJ1 = pA; pontoJ2 = pB;
-            } else {
-                pontoJ1 = pB; pontoJ2 = pA;
-            }
-
-            // Verificar fim do Set (Regra 11 pontos e vantagem de 2)
-            if ((pontoJ1 >= 11 || pontoJ2 >= 11) && Math.abs(pontoJ1 - pontoJ2) >= 2) {
-                if (pontoJ1 > pontoJ2) mesa.s1++; else mesa.s2++;
-                // Reset para novo set (O ESP32 deve ser zerado manualmente ou via comando se preferir)
-                mesa.setAtual++;
-                alert(`Fim do Set na ${id}! Placar de Sets: ${mesa.s1} - ${mesa.s2}`);
-            }
+            // Regra de Inversão de Lado por Set
+            let pontoJ1 = (mesa.setAtual % 2 !== 0) ? pA : pB;
+            let pontoJ2 = (mesa.setAtual % 2 !== 0) ? pB : pA;
 
             // Lógica de Saque
             let total = pontoJ1 + pontoJ2;
             let quemSaca;
             if (pontoJ1 >= 10 && pontoJ2 >= 10) {
-                // Deuce: muda a cada 1 ponto
-                quemSaca = (total % 2 === 0) ? "Jogador 1" : "Jogador 2";
+                quemSaca = (total % 2 === 0) ? "JOGADOR 1" : "JOGADOR 2";
             } else {
-                // Normal: muda a cada 2 pontos
-                quemSaca = (Math.floor(total / 2) % 2 === 0) ? "Jogador 1" : "Jogador 2";
+                quemSaca = (Math.floor(total / 2) % 2 === 0) ? "JOGADOR 1" : "JOGADOR 2";
             }
 
-            // Atualizar Tela
-            document.getElementById(`${id.charAt(0)}${id.slice(1).replace('mesa', 'm')}-pontos`).innerHTML = `${pontoJ1} - ${pontoJ2}`;
-            document.getElementById(`${id.charAt(0)}${id.slice(1).replace('mesa', 'm')}-sets`).innerHTML = `Sets: ${mesa.s1} - ${mesa.s2}`;
-            document.getElementById(`${id.charAt(0)}${id.slice(1).replace('mesa', 'm')}-saque`).innerHTML = `SAQUE: ${quemSaca}`;
-        }
+            // Atualiza a Interface
+            document.getElementById(`${prefixo}-pontos`).innerText = `${pontoJ1} - ${pontoJ2}`;
+            document.getElementById(`${prefixo}-saque`).innerText = `SAQUE: ${quemSaca}`;
+            
+            // Lógica de Fim de Set (Apenas visual aqui, o reset total deve ser no ESP32 ou botão físico)
+            if ((pontoJ1 >= 11 || pontoJ2 >= 11) && Math.abs(pontoJ1 - pontoJ2) >= 2) {
+                document.getElementById(`${prefixo}-saque`).innerText = "FIM DO SET!";
+            }
+        };
 
-        client.connect({ useSSL: true, onSuccess: () => {
-            client.subscribe("tenis_mesa/+/pontos"); // O '+' é um wildcard para pegar todas as mesas
-            console.log("Conectado!");
-        }});
+        const options = {
+            useSSL: true,
+            onSuccess: () => {
+                console.log("Conectado ao HiveMQ via WSS!");
+                // Assina o tópico pai para ouvir as 3 mesas
+                client.subscribe("tenis_mesa/+/pontos");
+            },
+            onFailure: (e) => {
+                console.log("Falha na conexão: ", e);
+            }
+        };
+
+        client.connect(options);
     </script>
 </body>
 </html>
