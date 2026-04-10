@@ -14,13 +14,29 @@
     <div class="placar" id="display">Aguardando dados...</div>
 
     <script>
-        client = new Paho.MQTT.Client("broker.hivemq.com", Number(8000), "web_client_" + Math.random());
-        client.onMessageArrived = (message) => {
-            document.getElementById("display").innerHTML = message.payloadString;
-        };
-        client.connect({onSuccess: () => {
-            client.subscribe("projeto_arcade_mika_2024_xyz/placar");
-        }});
-    </script>
+        // Alterações: 
+// 1. Usamos a porta 8884 (porta segura do HiveMQ)
+// 2. Ativamos a flag useSSL: true
+client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_client_" + Math.random());
+
+client.onMessageArrived = (message) => {
+    document.getElementById("display").innerHTML = message.payloadString;
+};
+
+// Configurações de conexão segura
+var options = {
+    useSSL: true,
+    onSuccess: onConnect,
+    onFailure: (message) => {
+        console.log("Falha na conexão: " + message.errorMessage);
+    }
+};
+
+function onConnect() {
+    console.log("Conectado com sucesso via WSS!");
+    client.subscribe("arcade/mika/placar_ao_vivo"); // Use o mesmo tópico do ESP32
+}
+
+client.connect(options);    </script>
 </body>
 </html>
