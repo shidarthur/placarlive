@@ -2,30 +2,133 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Arena Tênis de Mesa - Placar Oficial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena Tênis de Mesa - Live Score</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: white; display: flex; flex-wrap: wrap; justify-content: center; gap: 25px; padding: 20px; }
-        .mesa { background: #181818; border: 2px solid #333; border-radius: 20px; width: 360px; padding: 20px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.8); transition: transform 0.3s; }
-        .mesa:hover { border-color: #00d4ff; }
-        .mesa-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-        .sets { font-size: 28px; color: #ff9800; font-weight: bold; }
-        .placar-box { display: flex; justify-content: space-around; align-items: center; background: #000; padding: 20px; border-radius: 15px; margin: 15px 0; }
-        .pontos { font-size: 85px; font-weight: bold; color: #00ff00; font-family: 'Courier New', monospace; line-height: 0.9; }
-        .label { font-size: 11px; color: #888; margin-top: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        .saque { height: 14px; width: 14px; background: #ffff00; border-radius: 50%; margin: 0 auto 8px auto; visibility: hidden; }
-        .saque.ativo { visibility: visible; box-shadow: 0 0 15px #ffff00; }
-        .info-txt { font-size: 14px; color: #00d4ff; font-weight: 500; min-height: 20px; }
-        button { background: #b30000; color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; text-transform: uppercase; }
-        button:hover { background: #ff0000; }
-        .status-mqtt { font-size: 10px; color: #444; margin-top: 10px; }
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #181818;
+            --accent-color: #00d4ff;
+            --score-color: #00ff00;
+            --set-color: #ff9800;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: white;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .mesa {
+            background: var(--card-bg);
+            border: 2px solid #333;
+            border-radius: 20px;
+            width: 360px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .mesa-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .sets {
+            font-size: 28px;
+            color: var(--set-color);
+            font-weight: bold;
+        }
+
+        .placar-box {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #000;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            border: 1px solid #222;
+        }
+
+        .pontos {
+            font-size: 85px;
+            font-weight: bold;
+            color: var(--score-color);
+            font-family: 'Courier New', monospace;
+            line-height: 0.9;
+        }
+
+        .label {
+            font-size: 11px;
+            color: #888;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .saque {
+            height: 14px;
+            width: 14px;
+            background: #ffff00;
+            border-radius: 50%;
+            margin: 0 auto 8px auto;
+            visibility: hidden;
+        }
+
+        .saque.ativo {
+            visibility: visible;
+            box-shadow: 0 0 15px #ffff00;
+        }
+
+        .info-txt {
+            font-size: 14px;
+            color: var(--accent-color);
+            font-weight: 500;
+            min-height: 20px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: #b30000;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #ff0000;
+        }
+
+        .status-mqtt {
+            font-size: 10px;
+            color: #444;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
     <div class="mesa" id="mesa1">
         <div class="mesa-header">
-            <h3 style="margin:0; color:#00d4ff;">MESA 1</h3>
+            <h3 style="margin:0; color:var(--accent-color);">MESA 1</h3>
             <div class="sets" id="m1-sets">0 - 0</div>
         </div>
         <div class="placar-box">
@@ -40,14 +143,14 @@
                 <div class="label" id="m1-l2">JOGADOR 2</div>
             </div>
         </div>
-        <div class="info-txt" id="m1-info">Set 1 - Lados Normais</div>
-        <button onclick="enviarReset('mesa1')">Zerar Partida</button>
-        <div class="status-mqtt" id="m1-status">Offline</div>
+        <div class="info-txt" id="m1-info">Conectando...</div>
+        <button onclick="enviarReset('mesa1')">Zerar Mesa 1</button>
+        <div class="status-mqtt" id="m1-status">MQTT Offline</div>
     </div>
 
     <div class="mesa" id="mesa2">
         <div class="mesa-header">
-            <h3 style="margin:0; color:#00d4ff;">MESA 2</h3>
+            <h3 style="margin:0; color:var(--accent-color);">MESA 2</h3>
             <div class="sets" id="m2-sets">0 - 0</div>
         </div>
         <div class="placar-box">
@@ -62,14 +165,14 @@
                 <div class="label" id="m2-l2">JOGADOR 2</div>
             </div>
         </div>
-        <div class="info-txt" id="m2-info">Set 1 - Lados Normais</div>
-        <button onclick="enviarReset('mesa2')">Zerar Partida</button>
-        <div class="status-mqtt" id="m2-status">Offline</div>
+        <div class="info-txt" id="m2-info">Conectando...</div>
+        <button onclick="enviarReset('mesa2')">Zerar Mesa 2</button>
+        <div class="status-mqtt" id="m2-status">MQTT Offline</div>
     </div>
 
     <div class="mesa" id="mesa3">
         <div class="mesa-header">
-            <h3 style="margin:0; color:#00d4ff;">MESA 3</h3>
+            <h3 style="margin:0; color:var(--accent-color);">MESA 3</h3>
             <div class="sets" id="m3-sets">0 - 0</div>
         </div>
         <div class="placar-box">
@@ -84,94 +187,121 @@
                 <div class="label" id="m3-l2">JOGADOR 2</div>
             </div>
         </div>
-        <div class="info-txt" id="m3-info">Set 1 - Lados Normais</div>
-        <button onclick="enviarReset('mesa3')">Zerar Partida</button>
-        <div class="status-mqtt" id="m3-status">Offline</div>
+        <div class="info-txt" id="m3-info">Conectando...</div>
+        <button onclick="enviarReset('mesa3')">Zerar Mesa 3</button>
+        <div class="status-mqtt" id="m3-status">MQTT Offline</div>
     </div>
 
     <script>
-        // Conexão com Broker HiveMQ Público via WSS (Porta 8884)
-        const client = new Paho.MQTT.Client("broker.hivemq.com", Number(8884), "web_arena_pro_" + Math.random().toString(16));
+        // Configurações do Broker (HiveMQ Público via WebSocket Seguro)
+        const broker = "broker.hivemq.com";
+        const porta = 8884;
+        const clienteID = "web_arena_client_" + Math.random().toString(16).substr(2, 8);
+        
+        const client = new Paho.MQTT.Client(broker, porta, clienteID);
 
-        // Banco de dados interno para as 3 mesas
-        const db = {
-            mesa1: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false },
-            mesa2: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false },
-            mesa3: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false }
+        // Banco de dados do estado das mesas
+        const mesas = {
+            mesa1: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false, modulo: "esp_1" },
+            mesa2: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false, modulo: "esp_2" },
+            mesa3: { p1: 0, p2: 0, s1: 0, s2: 0, setAtual: 1, invertido: false, modulo: "esp_3" }
         };
 
-        // Envia comando de RESET para o ESP32 específico
-        function enviarReset(mesaId) {
-            const message = new Paho.MQTT.Message(JSON.stringify({comando: "RESET"}));
-            message.destinationName = `tenis_mesa/${mesaId}/controle`;
-            client.send(message);
-
-            // Reinicia os dados na WEB
-            db[mesaId].s1 = 0; db[mesaId].s2 = 0; db[mesaId].setAtual = 1; db[mesaId].invertido = false;
-            render(mesaId);
-        }
-
-        // Função para atualizar o visual da mesa
+        // Função para renderizar as mudanças na tela
         function render(id) {
-            const m = db[id];
+            const m = mesas[id];
             const pref = id === 'mesa1' ? 'm1' : (id === 'mesa2' ? 'm2' : 'm3');
             
             document.getElementById(`${pref}-p1`).innerText = m.p1;
             document.getElementById(`${pref}-p2`).innerText = m.p2;
             document.getElementById(`${pref}-sets`).innerText = `${m.s1} - ${m.s2}`;
+            
+            // Atualiza labels de jogadores (Inversão visual)
             document.getElementById(`${pref}-l1`).innerText = m.invertido ? "JOGADOR 2" : "JOGADOR 1";
             document.getElementById(`${pref}-l2`).innerText = m.invertido ? "JOGADOR 1" : "JOGADOR 2";
-            document.getElementById(`${pref}-info`).innerText = `Set ${m.setAtual} - ${m.invertido ? 'Invertido' : 'Normal'}`;
+            
+            document.getElementById(`${pref}-info`).innerText = `Set ${m.setAtual} - ${m.invertido ? 'Lados Invertidos' : 'Lados Normais'}`;
 
-            // Lógica de Saque
+            // Lógica de Saque Automática
             const total = m.p1 + m.p2;
-            let saqueJ1 = (m.p1 >= 10 && m.p2 >= 10) ? (total % 2 === 0) : (Math.floor(total / 2) % 2 === 0);
-            document.getElementById(`${pref}-s1`).className = `saque ${saqueJ1 ? 'ativo' : ''}`;
-            document.getElementById(`${pref}-s2`).className = `saque ${!saqueJ1 ? 'ativo' : ''}`;
+            let saqueLado1; // Lado esquerdo da tela
+            
+            if (m.p1 >= 10 && m.p2 >= 10) {
+                saqueLado1 = (total % 2 === 0);
+            } else {
+                saqueLado1 = (Math.floor(total / 2) % 2 === 0);
+            }
+
+            document.getElementById(`${pref}-s1`).className = `saque ${saqueLado1 ? 'ativo' : ''}`;
+            document.getElementById(`${pref}-s2`).className = `saque ${!saqueLado1 ? 'ativo' : ''}`;
         }
 
+        // Função para enviar sinal de RESET para o ESP32 físico
+        function enviarReset(id) {
+            const payload = JSON.stringify({ comando: "RESET" });
+            const message = new Paho.MQTT.Message(payload);
+            message.destinationName = `tenis_mesa/${id}/controle`;
+            client.send(message);
+
+            // Reseta a lógica interna da Web
+            mesas[id].s1 = 0; mesas[id].s2 = 0; 
+            mesas[id].setAtual = 1; mesas[id].invertido = false;
+            render(id);
+        }
+
+        // Processamento das mensagens recebidas
         client.onMessageArrived = (msg) => {
             try {
-                const json = JSON.parse(msg.payloadString);
+                const dados = JSON.parse(msg.payloadString);
                 
-                // Mapeia o moduloID do JSON para o ID da mesa no HTML
-                let mesaId = "";
-                if (json.moduloID === "esp_1") mesaId = "mesa1";
-                else if (json.moduloID === "esp_2") mesaId = "mesa2";
-                else if (json.moduloID === "esp_3") mesaId = "mesa3";
+                // Encontra qual mesa possui o moduloID recebido
+                let mesaKey = Object.keys(mesas).find(key => mesas[key].modulo === dados.moduloID);
 
-                if (db[mesaId]) {
-                    const m = db[mesaId];
+                if (mesaKey) {
+                    const m = mesas[mesaKey];
 
-                    // Aplica a inversão de botões conforme o Set
+                    // Aplica inversão de botões
                     if (!m.invertido) {
-                        m.p1 = json.jg1; m.p2 = json.jg2;
+                        m.p1 = dados.jg1; m.p2 = dados.jg2;
                     } else {
-                        m.p1 = json.jg2; m.p2 = json.jg1;
+                        m.p1 = dados.jg2; m.p2 = dados.jg1;
                     }
 
-                    // Regra de Fim de Set (11 pontos e diferença de 2)
+                    // Verifica se o set acabou (Regra: 11 pontos e 2 de vantagem)
                     if ((m.p1 >= 11 || m.p2 >= 11) && Math.abs(m.p1 - m.p2) >= 2) {
                         if (m.p1 > m.p2) m.s1++; else m.s2++;
                         m.setAtual++;
                         m.invertido = !m.invertido;
                         
-                        // Comando para o ESP32 zerar os contadores jg1 e jg2 físicos
-                        const resetMsg = new Paho.MQTT.Message(JSON.stringify({comando: "RESET"}));
-                        resetMsg.destinationName = `tenis_mesa/${mesaId}/controle`;
+                        // Solicita que o ESP32 zere os pontos dele para o novo set
+                        const resetPayload = JSON.stringify({ comando: "RESET" });
+                        const resetMsg = new Paho.MQTT.Message(resetPayload);
+                        resetMsg.destinationName = `tenis_mesa/${mesaKey}/controle`;
                         client.send(resetMsg);
                     }
-                    render(mesaId);
+                    render(mesaKey);
                 }
-            } catch (e) { console.error("Erro JSON:", e); }
+            } catch (e) {
+                console.error("Erro ao processar JSON:", e);
+            }
         };
 
-        client.onConnectionLost = (obj) => { console.log("Caiu:", obj.errorMessage); };
+        // Gerenciamento de conexão
+        const options = {
+            useSSL: true,
+            onSuccess: () => {
+                console.log("Conectado ao MQTT!");
+                client.subscribe("tenis_mesa/+/pontos");
+                document.querySelectorAll('.status-mqtt').forEach(el => el.innerText = "Online (WSS)");
+                document.querySelectorAll('.info-txt').forEach(el => el.innerText = "Aguardando partida...");
+            },
+            onFailure: (err) => {
+                console.log("Falha na conexão: " + err.errorMessage);
+                setTimeout(() => location.reload(), 5000);
+            }
+        };
 
-        client.connect({ useSSL: true, onSuccess: () => {
-            client.subscribe("tenis_mesa/+/pontos");
-            document.querySelectorAll('.status-mqtt').forEach(el => el.innerText = "Online (WSS)");
-        }});
+        client.connect(options);
     </script>
 </body>
 </html>
